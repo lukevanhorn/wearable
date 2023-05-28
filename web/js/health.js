@@ -208,7 +208,7 @@
                 }
 
                 if(self.deviceList && self.deviceList.length) {
-                    self.deviceList.sort(function(a,b) { a.lastTimestamp > b.lastTimestamp ? 1 : -1 });
+                    self.deviceList.sort((a,b) => a.lastTimestamp > b.lastTimestamp ? -1 : 1);
                     self.device = self.deviceList[0];
                 }
 
