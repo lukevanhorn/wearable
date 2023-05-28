@@ -1,0 +1,91 @@
+<html lang="en">
+    <head>
+        <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+        <meta http-equiv="Pragma" content="no-cache" />
+        <meta http-equiv="Expires" content="0" />        
+        <title>Activity Tracker</title>  
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="black">
+        <meta name="apple-mobile-web-app-title" content="Activity Tracker">
+        <meta name="description" content="Activity Tracking Example">
+        <meta name="theme-color" content="#BBABF4" />
+        <link rel="stylesheet" href="css/style.css">
+
+    </head>
+    <body onload="app.init();">
+        <div class="vbox" style="overflow: hidden">
+            <header id="header-main">
+                <div class="hbox v-center" style="flex: 1; min-height: 40px; border-bottom: 1px solid #AEAEAE; padding-left: 20px; padding-right: 20px;">
+                    <div class="vbox ble-feature" onclick="health.connect();">
+                        <div class="button-icon">
+                            <i class="material-icons">
+                                <svg xmlns="http://www.w3.org/2000/svg" height="24" width="24"><path d="M9.375 21.1 8.25 17.25q-1.225-.825-1.987-2.213Q5.5 13.65 5.5 12t.763-3.038Q7.025 7.575 8.25 6.75L9.375 2.9h5.25l1.125 3.85q1.225.825 1.988 2.212Q18.5 10.35 18.5 12t-.762 3.037q-.763 1.388-1.988 2.213l-1.125 3.85ZM12 17q2.075 0 3.538-1.463Q17 14.075 17 12t-1.462-3.538Q14.075 7 12 7 9.925 7 8.463 8.462 7 9.925 7 12q0 2.075 1.463 3.537Q9.925 17 12 17ZM10.075 5.8q.525-.15.987-.238.463-.087.938-.087.475 0 .938.087.462.088.987.238L13.5 4.4h-3Zm.425 13.8h3l.425-1.4q-.525.15-.987.225-.463.075-.938.075-.475 0-.938-.075-.462-.075-.987-.225Zm-.425-15.2H13.925 10.075Zm.425 15.2h-.425H13.925 13.5Z"/></svg>
+                            </i>
+                        </div>
+                        <div style="font-size: 8px; text-align: center">Connect</div>                
+                    </div> 
+                    <div style="flex: 1;"></div>
+                    <div class="vbox" style="margin-right: 10px" onclick="health.showActivity();">
+                        <div id="activityIcon" class="button-icon button-selected" style="margin-right: 0px">
+                            <i>
+                                <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24" width="24px"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M3.5 18.49l6-6.01 4 4L22 6.92l-1.41-1.41-7.09 7.97-4-4L2 16.99l1.5 1.5z"/></svg>
+                            </i>
+                        </div>
+                        <div style="font-size: 8px; text-align: center">Activity</div>                
+                    </div>  
+                    <div class="vbox" style="margin-right: 10px" onclick="health.showSleep();">
+                        <div id="sleepIcon" class="button-icon" style="margin-right: 0px">
+                            <i>
+                                <svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24"><path d="M483-80q-84 0-157.5-32t-128-86.5Q143-253 111-326.5T79-484q0-146 93-257.5T409-880q-18 98 11 192.635 29 94.635 100 165.736 71 71.101 165.5 100.143Q780-392.445 879-410.471q-26 144.206-138 237.338Q629-80 483-80Zm0-60q100 0 182-57t132-145q-90-8-173-41.5T477.5-480Q414-543 381-625.5T340-797q-88 48-144.5 130.5T139-484q0 143.333 100.333 243.667Q339.667-140 483-140Zm-6-340Zm267-128-42-94-94-42 94-42 42-94 42 94 94 42-94 42-42 94Z"/></svg>
+                                <!--<svg xmlns="http://www.w3.org/2000/svg" height="24" width="24"><path d="m12.25 21.75-.35-9.875-4.2-1.125H.95v-1.5h6.125l7.35-5.2.95 1.15-4.425 3.15 3.275.45 7.525-4.475.875 1.025-8.25 6.35-.625 10.05ZM6.1 7.85q-.775 0-1.313-.55Q4.25 6.75 4.25 6t.537-1.3q.538-.55 1.313-.55.75 0 1.3.55T7.95 6q0 .75-.55 1.3t-1.3.55Z"/></svg>-->
+                            </i>
+                        </div>
+                        <div style="font-size: 8px; text-align: center">Sleep</div>                
+                    </div>  
+                    <div class="vbox" style="margin-right: 10px" onclick="health.showSteps();">
+                        <div id="stepsIcon" class="button-icon" style="margin-right: 0px">
+                            <i>
+                                <svg xmlns="http://www.w3.org/2000/svg" height="24" width="24"><path d="M7.875 17.5q-1.625 0-2.525-1.238-.9-1.237-.85-2.937v-.1l-.525-.8q-.4-.6-.937-2.063Q2.5 8.9 2.5 7q0-2.375 1.138-3.938Q4.775 1.5 6.5 1.5q1.825 0 2.913 1.688Q10.5 4.875 10.5 7q0 1.375-.4 2.637-.4 1.263-.75 2.063l.325.525q.25.425.538 1.112.287.688.287 1.338 0 1.225-.738 2.025-.737.8-1.887.8Zm-2.45-5.6 2.45-.55q.35-.8.738-1.975Q9 8.2 9 7q0-1.55-.7-2.775Q7.6 3 6.5 3T4.7 4.225Q4 5.45 4 7q0 1.5.45 2.812.45 1.313.975 2.088Zm2.45 4.1q.475 0 .8-.363.325-.362.325-.962 0-.425-.212-.925-.213-.5-.513-.95L6 13.3q0 1.15.463 1.925.462.775 1.412.775Zm8.25 6.5q-1.15 0-1.887-.8-.738-.8-.738-2.025 0-.65.288-1.338.287-.687.537-1.112l.325-.525q-.325-.8-.737-2.063Q13.5 13.375 13.5 12q0-2.125 1.088-3.812Q15.675 6.5 17.5 6.5q1.725 0 2.863 1.562Q21.5 9.625 21.5 12q0 1.9-.538 3.337-.537 1.438-.937 2.063l-.525.825v.1q.025 1.675-.862 2.925-.888 1.25-2.513 1.25Zm2.4-5.55q.65-1 1.062-2.188Q20 13.575 20 12q0-1.55-.7-2.775Q18.6 8 17.5 8t-1.8 1.225Q15 10.45 15 12q0 1.2.387 2.363.388 1.162.738 1.987Zm-2.4 4.05q.925 0 1.4-.762.475-.763.475-1.863l-2.275-.6q-.225.4-.475.913-.25.512-.25.987 0 .5.325.912.325.413.8.413Z"/></svg>
+                            </i>
+                        </div>
+                        <div style="font-size: 8px; text-align: center">Steps</div>                
+                    </div>
+                    <div class="vbox" onclick="health.showTemp();">
+                        <div id="tempIcon" class="button-icon" style="margin-right: 0px">
+                            <i>
+                                <svg xmlns="http://www.w3.org/2000/svg" height="24" width="24"><path d="M12 21.5q-1.875 0-3.188-1.312Q7.5 18.875 7.5 17q0-1.15.525-2.125.525-.975 1.475-1.6V5q0-1.05.725-1.775Q10.95 2.5 12 2.5q1.05 0 1.775.725Q14.5 3.95 14.5 5v8.275q.95.625 1.475 1.6.525.975.525 2.125 0 1.875-1.312 3.188Q13.875 21.5 12 21.5Zm-1-10.3h2V9.95h-1v-.9h1v-2.1h-1v-.9h1V5q0-.425-.287-.713Q12.425 4 12 4t-.712.287Q11 4.575 11 5Z"/></svg>
+                            </i>
+                        </div>
+                        <div style="font-size: 8px; text-align: center">Temp</div>                
+                    </div>                      
+                </div>
+            </header>
+            <div id="page-error" class="page-error hidden"></div>
+            <div id="app-wait" class="modal modal-dim wait-modal hidden" style="z-index: 99;" onclick="event.preventDefault(); event.stopImmediatePropagation();">
+                <div class="app-wait"></div>
+            </div>
+            <div id="mainView" style="overflow: hidden">
+                <div class="vbox" style="flex: 1; padding-left: 15px; padding-right: 15px; margin: auto;">
+                    <div class="item-activity" style="flex: 1; overflow-x: auto; border-bottom: 1px solid #EAEAEA;"></div>
+                </div>
+            </div>
+            <div id="statusModal" class="modal hidden" style="z-index: 99;" data-value="" onclick="event.stopImmediatePropagation();">
+                <div class="modal-content vbox">
+                    <div class="hbox h-center v-center" style="margin-bottom: 20px; font-size: 14px; min-height: 100px; max-height: 200px; overflow-y: hidden; text-align: center;">
+                        <pre class="status-message" style="white-space: pre-wrap"></pre>
+                    </div>
+                    <div class="app-wait" style="position: absolute; width: 40px; height: 40px; margin: -20px 0 0 -20px; position: relative;"></div>
+                    <div class="hbox h-center v-center" style="margin-top: 20px;">
+                        <button class="form-button status-cancelButton">Cancel</button>
+                    </div>
+                </div>
+            </div>  
+        </div>
+        <script src="js/util.js"></script>
+        <script src="js/app.js"></script>    
+        <script src="js/ble.js"></script>    
+        <script src="js/health.js"></script>
+    </body>
+</html>
