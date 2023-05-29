@@ -388,7 +388,7 @@
                 svg.appendChild(txtElem);
             
                 if(h.night == true) {
-                    self.addChildElement(svg, 'svg', { y: 30, x: h.x, fill: 'rgba(187, 187, 187, .6)', width: 20, height: 20, viewBox: '0 0 25 25'}, '<path d="M11.062 17.875q-1.437 0-2.697-.542-1.261-.541-2.209-1.489-.948-.948-1.489-2.209-.542-1.26-.542-2.697 0-2.105 1.104-3.855T8.333 4.5q.021 1.917.729 3.552.709 1.636 2.021 2.948 1.25 1.271 2.927 1.958 1.678.688 3.49.709-.812 1.937-2.573 3.073-1.76 1.135-3.865 1.135Z"/>');
+                    self.addChildElement(svg, 'svg', { y: 22, x: h.x - 10, fill: 'rgba(187, 187, 187, .6)', width: 12, height: 12, viewBox: '0 0 25 25'}, '<path d="M11.062 17.875q-1.437 0-2.697-.542-1.261-.541-2.209-1.489-.948-.948-1.489-2.209-.542-1.26-.542-2.697 0-2.105 1.104-3.855T8.333 4.5q.021 1.917.729 3.552.709 1.636 2.021 2.948 1.25 1.271 2.927 1.958 1.678.688 3.49.709-.812 1.937-2.573 3.073-1.76 1.135-3.865 1.135Z"/>');
                 } 
             });
     
@@ -405,17 +405,21 @@
             
             let sampleWidth = width / (totalMS / 60000);
             sampleWidth *= 1.25;
-            let iRatio = 1;
 
-            if(self.metric === 'temperature') {
-                iRatio = 255 / 130;
-                sleepHeight = bh;
-            }
-    
-            let tempY = bh;
             let stepsY = 226;
             let sleepY = 162;
             let actY = 98;
+            let tempY = bh;
+
+            //set the section headers
+            self.addChildElement(svg, 'svg', { y: actY - 54, x: 0, fill: 'rgba(187, 187, 187, .8)', width: 20, height: 20, viewBox: '0 0 25 25'}, '<path d="M3.5 18.49l6-6.01 4 4L22 6.92l-1.41-1.41-7.09 7.97-4-4L2 16.99l1.5 1.5z"/>');
+            self.addChildElement(svg, 'text', { y: actY - 40, x: 20, fill: 'rgba(187, 187, 187, .8)', style: 'font-size: 16px'}, 'Intensity');
+            self.addChildElement(svg, 'svg', { y: sleepY - 54, x: 0, fill: 'rgba(187, 187, 187, .8)', width: 20, height: 20, viewBox: '0 0 25 25'}, '<path d="M11.062 17.875q-1.437 0-2.697-.542-1.261-.541-2.209-1.489-.948-.948-1.489-2.209-.542-1.26-.542-2.697 0-2.105 1.104-3.855T8.333 4.5q.021 1.917.729 3.552.709 1.636 2.021 2.948 1.25 1.271 2.927 1.958 1.678.688 3.49.709-.812 1.937-2.573 3.073-1.76 1.135-3.865 1.135Z"/>');
+            self.addChildElement(svg, 'text', { y: sleepY - 40, x: 20, fill: 'rgba(187, 187, 187, .8)', style: 'font-size: 16px'}, 'Sleep');
+            self.addChildElement(svg, 'svg', { y: stepsY - 54, x: 0, fill: 'rgba(187, 187, 187, .8)', width: 18, height: 18, viewBox: '0 -960 960 960'}, '<path d="M216-570H86q4-17 10.5-32t17.5-29l154-206q17-23 45.5-30.5T368-861l28 14q21 11 32.5 30t11.5 42v84l74-19q30-8 58 7.5t38 44.5l65 196 170 170q20 20 27.5 43t7.5 49q0 40-23 70.5T798-87L347-518q-27-25-61-38.5T216-570ZM566-80q-30 0-57-11t-50-31L134-417q-21-19-33-43t-17-50h132q25 0 48.5 9.5T306-474L717-80H566Z"/>');
+            self.addChildElement(svg, 'text', { y: stepsY - 40, x: 20, fill: 'rgba(187, 187, 187, .8)', style: 'font-size: 16px'}, 'Steps');
+            self.addChildElement(svg, 'svg', { y: tempY - 54, x: 0, fill: 'rgba(187, 187, 187, .8)', width: 20, height: 20, viewBox: '0 0 25 25'}, '<path d="M12 21.5q-1.875 0-3.188-1.312Q7.5 18.875 7.5 17q0-1.15.525-2.125.525-.975 1.475-1.6V5q0-1.05.725-1.775Q10.95 2.5 12 2.5q1.05 0 1.775.725Q14.5 3.95 14.5 5v8.275q.95.625 1.475 1.6.525.975.525 2.125 0 1.875-1.312 3.188Q13.875 21.5 12 21.5Zm-1-10.3h2V9.95h-1v-.9h1v-2.1h-1v-.9h1V5q0-.425-.287-.713Q12.425 4 12 4t-.712.287Q11 4.575 11 5Z"/>');
+            self.addChildElement(svg, 'text', { y: tempY - 40, x: 20, fill: 'rgba(187, 187, 187, .8)', style: 'font-size: 16px'}, 'Temperature');
 
             list.forEach(function(sample) {     
                 
@@ -428,7 +432,8 @@
                 let actYOffset = actY - (sample.intensity * .25);
                 let sleepYOffset = sleepY - (sample.category > 1 ? (sample.category * 10) : 0);
                 let stepsYOffset = stepsY - (sample.steps * .125);
-                let tempYOffset = tempY - (sample.temperature * .5);
+                //offset temperature to human range (6 - 110)
+                let tempYOffset = tempY - (Math.min(Math.max(sample.temperature - 60, 0), 50));
 
                 activePath += ((activePath ? '' : ('M' + xOffset + ' ' + actY)) + 'L' + xOffset + ' ' + actYOffset);
                 sleepPath += ((sleepPath ? '' : ('M' + xOffset + ' ' + sleepY)) + 'L' + xOffset + ' ' + sleepYOffset);
