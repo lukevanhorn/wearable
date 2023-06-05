@@ -39,7 +39,7 @@ void activity_add_sample(uint32_t ts, uint8_t intensity, uint16_t steps, uint8_t
     memset(activity_buffer_ptr, 0, sizeof(activity_sample_t));
 
     /* determine the category based on recent movement */
-    if(intensity > 20) {
+    if(intensity > 5) {
         //active state
         //reset the counters
         sleep_count = 0;

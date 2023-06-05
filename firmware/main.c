@@ -37,7 +37,7 @@
 #define DEVICE_NAME                     "Band"                                    /**< Name of device. Will be included in the advertising data. */
 #define MANUFACTURER_NAME               "Band"                                    /**< Manufacturer. Will be passed to Device Information Service. */
 #define APP_ADV_INTERVAL                1600                                     /**< The advertising interval (in units of 0.625 ms. This value corresponds to 500 ms). */
-#define RADIO_TX_LEVEL                  0                                       /* 0dB */
+#define RADIO_TX_LEVEL                  0                                        /* 0dB */
 
 #define ACTIVITY_SERVICE_UUID_TYPE      BLE_UUID_TYPE_VENDOR_BEGIN              /**< UUID type for the Activity Service (vendor specific). */
 
@@ -62,7 +62,7 @@
 
 #define DEAD_BEEF                       0xDEADBEEF                              /**< Value used as error code on stack dump, can be used to identify stack location on stack unwind. */
 
-#define ACTIVITY_RECORD_INTERVAL        APP_TIMER_TICKS(1000)                   /** Read the FIFO buffer once a second, save the data every minute */
+#define ACTIVITY_RECORD_INTERVAL        APP_TIMER_TICKS(1000)                   /** Wake up and read samples; Save activity data every minute */
 
 #define APP_BATTERY_CHECK_TIMEOUT       60                                      /** Measure once an hour **/
 
@@ -79,7 +79,6 @@ volatile int32_t battery_check_timeout = 0;
 volatile uint32_t last_rtc_count = 0;
 volatile uint32_t timestamp = 0;
 volatile uint32_t last_sample_time = 0;
-
 
 //state Variables BLE Activity data request
 activity_sample_t * activity_rec_ptr;  //points to the next activity record to be transmitted
@@ -129,7 +128,7 @@ uint32_t get_elapsed_seconds(uint32_t from, uint32_t to)
     return ROUNDED_DIV(app_timer_cnt_diff_compute(to, from), 16384);
 }
 
-static void update_current_time(void) 
+void update_current_time(void) 
 {
     uint32_t now = app_timer_cnt_get();
 
@@ -158,7 +157,6 @@ uint8_t get_current_battery(void)
     return battery_level_in_percent(battery * 1000);
 }
 
-
 /*********************  Sensor Data Functions ******************************/
 
 /*** Battery Measurement Functions ***/
@@ -170,32 +168,32 @@ static void battery_adc_event_handler(nrf_drv_saadc_evt_t const * p_event)
         return;
     }
 
-        nrf_saadc_value_t adc_result;
-        uint16_t batt_lvl_in_milli_volts;
-        uint32_t err_code;
+    nrf_saadc_value_t adc_result;
+    uint16_t batt_lvl_in_milli_volts;
+    uint32_t err_code;
 
-        adc_result = p_event->data.done.p_buffer[0];
+    adc_result = p_event->data.done.p_buffer[0];
 
-        err_code = nrf_drv_saadc_buffer_convert(p_event->data.done.p_buffer, 1);
-        APP_ERROR_CHECK(err_code);
+    err_code = nrf_drv_saadc_buffer_convert(p_event->data.done.p_buffer, 1);
+    APP_ERROR_CHECK(err_code);
 
-        nrf_drv_saadc_uninit();
+    nrf_drv_saadc_uninit();
 
-        /*  To calculate the battery voltage in millivolts: 
-            Multiply the adc value by the reference voltage in millivolts (600)
-            Divide by 10bit max resolution (1024)
-            Add forward diode voltage drop in millivolts (270)
-        */
-        batt_lvl_in_milli_volts = (((adc_result * 600) / 1024) * 6) + 270;
-        battery = ((float)batt_lvl_in_milli_volts / 1000);
+    /*  To calculate the battery voltage in millivolts: 
+        Multiply the adc value by the reference voltage in millivolts (600)
+        Divide by 10bit max resolution (1024)
+        Add forward diode voltage drop in millivolts (270)
+    */
+    batt_lvl_in_milli_volts = (((adc_result * 600) / 1024) * 6) + 270;
+    battery = ((float)batt_lvl_in_milli_volts / 1000);
 
-        //update the battery service value (this doesn't change it.  see below)
-        battery_adv_data[0] = battery_level_in_percent(batt_lvl_in_milli_volts);
+    //update the battery service value (this doesn't change it.  see below)
+    battery_adv_data[0] = battery_level_in_percent(batt_lvl_in_milli_volts);
 
-        //update the advertising memory location directly - this is a hack to change the advertising data without restarting 
-        *(m_advertising.adv_data.adv_data.p_data + APP_BLE_ADV_BAT_POS) = battery_adv_data[0];
+    //update the advertising memory location directly - this is a hack to change the advertising data without restarting 
+    *(m_advertising.adv_data.adv_data.p_data + APP_BLE_ADV_BAT_POS) = battery_adv_data[0];
 
-        NRF_LOG_DEBUG("Battery %1.2dV, %u%, %u", battery, battery_level_in_percent(batt_lvl_in_milli_volts), batt_lvl_in_milli_volts);
+    NRF_LOG_DEBUG("Battery %1.2dV, %u%, %u", battery, battery_level_in_percent(batt_lvl_in_milli_volts), batt_lvl_in_milli_volts);
 }
 
 static void battery_adc_init(void)
@@ -256,7 +254,7 @@ static ret_code_t save_activity_data(void)
 
     activity_add_sample(timestamp, intensity, steps, (uint8_t)temperature);
 
-    NRF_LOG_DEBUG("Activity Data: %u, %u, %u, %3.2dC, %1.3dV\r\n", timestamp, intensity, steps, temperature, battery);
+    NRF_LOG_DEBUG("Activity Data: %u, %u, %u, %3.2dF, %1.3dV", timestamp, intensity, steps, temperature, battery);
 
     return err_code;
 }
@@ -278,20 +276,13 @@ static void save_activity_timer_handler(void * p_context){
     //update the clock/timestamp values
     update_current_time();
 
-    //update the acc running average
+    //read the accelerometer samples
     acc_read_current_values();
 
     //save activity data once a minute 
     if((timestamp - last_sample_time) >= 60) {
         save_activity_data();
     }
-}
-
-//stops blinking after first 10 seconds of wakeup and advertise
-static void led_blink_timeout_handler(void * p_context){
-
-    UNUSED_PARAMETER(p_context);
-    bsp_indication_set(BSP_INDICATE_IDLE);
 }
 
 //initializes timers (activity and blink)
@@ -694,20 +685,6 @@ static void app_set_active(void)
     APP_ERROR_CHECK(err_code);
 }
 
-//Board Support Event Handler (unused)
-static void bsp_event_handler(bsp_event_t event)
-{
-    UNUSED_PARAMETER(event);
-}
-/*
-//LED init
-static void leds_init(void)
-{
-    ret_code_t err_code = bsp_init(BSP_INIT_LEDS, bsp_event_handler);
-    APP_ERROR_CHECK(err_code);
-}
-*/
-
 //Log init for debug
 static void log_init(void)
 {
@@ -745,7 +722,6 @@ int main(void)
     // Initialize.
     log_init();
     timers_init();
-    //leds_init();
 
     set_time(0); //initialize time variables
 

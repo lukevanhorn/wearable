@@ -15,9 +15,17 @@
 #include "custom_board.h"
 #include "lis3dh.h"
 
+//macros to read and set a single register
+#define REG_SET(reg,val)  RETURN_IF_ERROR(acc_write_regs(reg, val))
+#define REG_GET(reg,val)  *val = 0; RETURN_IF_ERROR(acc_read_regs(reg, val, 1))
+
+#define ACC_STEP_THRESHOLD      0x14
+#define ACC_SENS_OFFSET         6
+
 static nrfx_twi_t m_twi_master = NRFX_TWI_INSTANCE(0);
 
 extern uint32_t get_current_time(void);
+extern void update_current_time(void);
 
 //  **** private functions ****
 static ret_code_t acc_read_regs(uint8_t reg, uint8_t * const p_content, uint8_t len);
@@ -36,24 +44,7 @@ volatile uint32_t last_step = 0; //keeping track of stride
 
 volatile uint8_t current_orientation = 0;  //ZH,ZL,YH,YL,XH,ZL
 
-static void acc_int_event_handler(nrfx_gpiote_pin_t pin, nrf_gpiote_polarity_t action)
-{
-    uint32_t err_code;
-    uint8_t reg_val = 0;
-   
-
-    err_code = acc_read_regs(REG_INT1_SRC, &reg_val, 1);
-    RETURN_IF_ERROR(err_code);
-
-    if((reg_val & 0x0F) != (current_orientation & 0x0F)) {
-        NRF_LOG_DEBUG("mode movement orientation change %x, %x\r\n", reg_val, current_orientation);
-
-        //orientation change
-        current_orientation = (reg_val & 0x3f);
-
-        acc_update_orientation();
-    }
-}
+int8_t orientation[3] = {0,0,0};
 
 static ret_code_t acc_gpio_init(void) 
 {
@@ -84,7 +75,7 @@ static void acc_update_orientation(void)
     uint8_t new_cfg = (0x40 | (~current_orientation & 0x3F));
 
     uint32_t now = get_current_time();
-    NRF_LOG_DEBUG("New Orientation: %x, %x, %u\r\n", new_cfg, current_orientation, now - last_step);
+    NRF_LOG_DEBUG("Orientation: %s%s%s%s%s%s", (current_orientation & 0x20 ? "ZH" : ""), (current_orientation & 0x10 ? "ZL" : ""), (current_orientation & 0x08 ? "YH" : ""), (current_orientation & 0x04 ? "YL" : ""), (current_orientation & 0x02 ? "XH" : ""), (current_orientation & 0x01 ? "XL" : ""));
     if(last_step && ((now - last_step) < 3)) {
         if(step_count < 512) {
             step_count++;
@@ -102,49 +93,59 @@ static void acc_update_orientation(void)
 ret_code_t acc_read_current_values(void) 
 {
     ret_code_t err_code = 0;
-    uint8_t acc_val[6] = {0};
+    uint8_t acc_val[192] = {0};
     uint8_t read_count = 1;
     int16_t new_val = 0;
+    int8_t new_orientation = 0;
     uint16_t diff = 0;
-    //int16_t x, y, z;
+    uint8_t step = 0;
+    uint8_t index = 0;
+
+    //update_current_time();
 
     //read the number of available samples
-    err_code = acc_read_regs(REG_FIFO_SRC, &read_count, 1);
-    RETURN_IF_ERROR(err_code);
+    REG_GET(REG_FIFO_SRC, &read_count);
     read_count &= 0x1F;
 
-    memset(acc_val, 0, 6);
+    memset(acc_val, 0, read_count * 6);
 
-    while(read_count) {
+    err_code = acc_read_regs(REG_X, acc_val, read_count * 6);
+    RETURN_IF_ERROR(err_code);
 
-        err_code = acc_read_regs(REG_X, acc_val, 6);
-        RETURN_IF_ERROR(err_code);
+    //NRF_LOG_HEXDUMP_DEBUG(acc_val, read_count * 6);
 
-        //x = (int16_t)((acc_val[0] << 8) + acc_val[1]);
-        //y = (int16_t)((acc_val[2] << 8) + acc_val[3]);
-        //z = (int16_t)((acc_val[4] << 8) + acc_val[5]);
+    for(uint8_t s = 0; s < read_count; s++) {
 
-        //NRF_LOG_DEBUG("%u,%u,%u,%u,%u,%u\n", acc_val[0],acc_val[1],acc_val[2],acc_val[3],acc_val[4],acc_val[5]);
-        //NRF_LOG_DEBUG("%d,%d,%d\n", x, y, z);
+        step = 0;
 
-    
         for(uint8_t i = 0; i < 3; i++) {
-            new_val = (acc_val[(i * 2)] << 8) + (acc_val[(i * 2) + 1]);
-            new_val >>= ACC_SENS_OFFSET;  //adjust for sensor resolution
-            
+            index = (s*6) + (i * 2);
+            new_val = (int16_t)((acc_val[index] << 8) | (acc_val[index+1])) >> ACC_SENS_OFFSET;
             diff = (abs(acc_current_values[i] - new_val));
             acc_sum_diff += diff;
-
+            
             //update the reference value
             acc_current_values[i] = new_val;
+            
+            //check for step 
+            new_orientation = (new_val < (ACC_STEP_THRESHOLD * -1) ? -1 : (new_val > ACC_STEP_THRESHOLD ? 1 : 0));
+            if(orientation[i] != new_orientation && new_orientation != 0) {
+                step = 1;
+                //NRF_LOG_DEBUG("Orientation Change %d %d %u %d",orientation[i],new_orientation, s, new_val);
+                orientation[i] = new_orientation;
+            } 
         }
-
+        
         acc_sum_count++;
 
-        read_count--;
-    }
+        if(step) {
+            step_count += step;
+            NRF_LOG_DEBUG("Step %u %d%d%d",step_count,orientation[0],orientation[1],orientation[2]);
+        }
 
-    //NRF_LOG_DEBUG("diff: %d, sum: %d, %u, %u\n", acc_sum_diff, acc_sum_count, (uint32_t)(acc_sum_diff / acc_sum_count), (uint8_t)(acc_sum_diff / acc_sum_count));
+        //NRF_LOG_DEBUG("%d %d %d",(int16_t)((acc_val[(s*6)] << 8) | (acc_val[(s*6)+1])) >> ACC_SENS_OFFSET,(int16_t)((acc_val[(s*6)+2] << 8) | (acc_val[(s*6)+3])) >> ACC_SENS_OFFSET,(int16_t)((acc_val[(s*6)+4] << 8) | (acc_val[(s*6)+5])) >> ACC_SENS_OFFSET);
+
+    }     
 
     return err_code;
 }
@@ -156,17 +157,11 @@ static ret_code_t acc_read_regs(uint8_t reg, uint8_t * const p_content, uint8_t 
     if(len > 1) {
         reg |= 0x80; //set bit 7 for multi-byte reads
     }
-    err_code = nrfx_twi_tx(&m_twi_master,
-                               ACC_ADDR,
-                               &reg,
-                               len,
-                               true);
+
+    err_code = nrfx_twi_tx(&m_twi_master, ACC_ADDR, &reg, len, true);
     RETURN_IF_ERROR(err_code);
 
-    err_code = nrfx_twi_rx(&m_twi_master,
-                               ACC_ADDR,
-                               p_content,
-                               len);
+    err_code = nrfx_twi_rx(&m_twi_master, ACC_ADDR, p_content, len);
     RETURN_IF_ERROR(err_code);
 
     return err_code;
@@ -182,11 +177,7 @@ static ret_code_t acc_write_regs(uint8_t reg, uint8_t val)
     tx_buf[1] = val;
 
     // Perform SPI transfer.
-    err_code = nrfx_twi_tx(&m_twi_master,
-                              ACC_ADDR,
-                               tx_buf,
-                               2,
-                               false );
+    err_code = nrfx_twi_tx(&m_twi_master, ACC_ADDR, tx_buf, 2, false);
     RETURN_IF_ERROR(err_code);
 
     return 0;
@@ -214,109 +205,42 @@ ret_code_t acc_init()
 
     nrfx_twi_enable(&m_twi_master);
 
-    //Reset memory
-    err_code = acc_write_regs(REG_CTRL5, 0x80);  
-    RETURN_IF_ERROR(err_code);
-
-    nrf_delay_ms(0x14); //Delay 20ms
-
-    reg_val = 0;
-    err_code = acc_read_regs(REG_WHOAMI, &reg_val, 1);
-    RETURN_IF_ERROR(err_code);
-
-    NRF_LOG_DEBUG("Device ID %lx\r\n", reg_val); 
-
-    //1Hz, Enable All Axis
-    err_code = acc_write_regs(REG_CTRL1, 0x17); 
-    RETURN_IF_ERROR(err_code);
-
-    //Disable Interrupts
-    err_code = acc_write_regs(REG_CTRL3, 0x00); 
-    RETURN_IF_ERROR(err_code);
-
-    //Bypass Mode
-    err_code = acc_write_regs(REG_FIFO_CTRL, 0x00); 
-    RETURN_IF_ERROR(err_code);
-
-    //Read reference register
-    err_code = acc_read_regs(REG_REFERENCE, &reg_val, 1);
-    RETURN_IF_ERROR(err_code);
-
-    //Delay 10ms
-    nrf_delay_ms(0x0A); 
-
-    //Power Down, Disable all axis
-    //err_code = acc_write_regs(REG_CTRL1, 0x00); 
-    //RETURN_IF_ERROR(err_code);
-
-    //Delay 10ms
-    //nrf_delay_ms(0x0A); 
-
-    reg_val = 0;
-    err_code = acc_read_regs(REG_STATUS, &reg_val, 1);
-    RETURN_IF_ERROR(err_code);
+    REG_SET(REG_CTRL5, 0x80);           //Reset memory
+    nrf_delay_ms(0x14);                 //Delay 20ms
     
-    //enable the interrupt
-    //nrfx_gpiote_in_event_enable(ACC_INT, true);
-
+    REG_GET(REG_WHOAMI, &reg_val);      //read the device ID
+    NRF_LOG_DEBUG("Device ID %lx\r\n", reg_val);
+       
     return 0;
 }
 
 ret_code_t acc_start_activity_monitor(void) 
 {
     ret_code_t err_code;
-    uint8_t reg_val;
 
-    //10Hz, Enable all Axis
-    err_code = acc_write_regs(REG_CTRL1, 0x27); 
-    RETURN_IF_ERROR(err_code);
+    REG_SET(REG_CTRL1, 0x27);           //10Hz, Enable all Axis
 
-    //IA1 on INT1
-    err_code = acc_write_regs(REG_CTRL3, 0x40); 
-    RETURN_IF_ERROR(err_code);
+    nrf_delay_ms(0x14);                 //Delay 20ms
 
-    //FIFO Enabled, Latch Interrupt 1, D4D on Int 1 
-    err_code = acc_write_regs(REG_CTRL5, 0x48);  
-    RETURN_IF_ERROR(err_code);
-
-    //FIFO Mode
-    err_code = acc_write_regs(REG_FIFO_CTRL, 0x80); 
-    RETURN_IF_ERROR(err_code);
-
-    //INT1 Config: 6D,ZH,ZL,YH,YL,XH,XL
-    err_code = acc_write_regs(REG_INT1_CFG, 0x4F); 
-    RETURN_IF_ERROR(err_code);
-
-    //INT1 Threshold
-    err_code = acc_write_regs(REG_INT1_THS, 0x21); 
-    RETURN_IF_ERROR(err_code);
-
-    //Read reference register
-    reg_val = 0;
-    err_code = acc_read_regs(REG_REFERENCE, &reg_val, 1);
-    RETURN_IF_ERROR(err_code);
-
-    //Delay 10ms
-    nrf_delay_ms(0x0A); 
-
-    reg_val = 0;
-    err_code = acc_read_regs(REG_INT1_SRC, &reg_val, 1);
-    current_orientation = (reg_val & 0x3f);
-    NRF_LOG_DEBUG("orientation %x, %x\r\n", reg_val, current_orientation);
-
-    acc_update_orientation();
+    //REG_SET(REG_CTRL3, 0x04);           //WTM1 on INT1  
+    //REG_SET(REG_CTRL5, 0x40);           //FIFO Enabled
+    //REG_SET(REG_FIFO_CTRL, 0x94);       //Steam to FIFO Mode, Interrupt on 20 samples   
+    
+    REG_SET(REG_CTRL3, 0x00);           //Clear Interrupts
+    REG_SET(REG_CTRL5, 0x40);           //FIFO Enabled
+    REG_SET(REG_FIFO_CTRL, 0x80);       //Stream to FIFO Mode
 
     //get the current values as reference
     err_code = acc_read_current_values();
     RETURN_IF_ERROR(err_code);
-    
+
     //reset the counter and sum values
     step_count = 0;
     acc_sum_diff = 0;
     acc_sum_count = 0;
 
     //enable the interrupt
-    nrfx_gpiote_in_event_enable(ACC_INT, true);
+    //nrfx_gpiote_in_event_enable(ACC_INT, true);
 
     return err_code;
 }

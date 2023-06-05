@@ -1,20 +1,11 @@
 #include "acc.h"
 
 #define ACC_ADDR (0x33 >> 1)
-#define ACC_SENS_OFFSET         6
-#define ACC_THS_OFFSET          4
-#define ACC_THS_RESET           2
-#define ACC_THS_MAX             0x7E
 
 #define REG_TEMP_L              0x0C
 #define REG_TEMP_H              0x0D
 #define REG_WHOAMI              0x0F
-
-#define ACC_DELAY              0x99
-
 #define REG_TEMP_CFG            0x1F
-#define BIT_TEMP_ENABLED        0xC0
-
 #define REG_CTRL1               0x20
 #define REG_CTRL2               0x21
 #define REG_CTRL3               0x22
