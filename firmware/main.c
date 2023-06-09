@@ -15,7 +15,6 @@
 #include "nrf_sdh_soc.h"
 #include "nrf_sdh_ble.h"
 #include "app_timer.h"
-#include "bsp_btn_ble.h"
 
 #include "ble_conn_state.h"
 #include "nrf_ble_gatt.h"
@@ -719,6 +718,9 @@ static void idle_state_handle(void)
 
 int main(void)
 {  
+    //power consumption on idle work around
+    //*(volatile uint32_t *)0x4007AC84ul = 0x00000002ul;
+
     // Initialize.
     log_init();
     timers_init();

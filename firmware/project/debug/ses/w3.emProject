@@ -92,8 +92,12 @@
       <file file_name="$(nRF5SDK)/modules/nrfx/drivers/src/nrfx_rtc.c" />
     </folder>
     <folder Name="Board Support">
-      <file file_name="$(nRF5SDK)/components/libraries/bsp/bsp.c" />
-      <file file_name="$(nRF5SDK)/components/libraries/bsp/bsp_btn_ble.c" />
+      <file file_name="$(nRF5SDK)/components/libraries/bsp/bsp.c">
+        <configuration Name="Release" build_exclude_from_build="Yes" />
+      </file>
+      <file file_name="$(nRF5SDK)/components/libraries/bsp/bsp_btn_ble.c">
+        <configuration Name="Release" build_exclude_from_build="Yes" />
+      </file>
     </folder>
     <folder Name="Application">
       <file file_name="../../../main.c" />

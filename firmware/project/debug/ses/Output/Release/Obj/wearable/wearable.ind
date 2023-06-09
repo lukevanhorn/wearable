@@ -37,8 +37,6 @@
 "Output/Release/Obj/wearable/nrfx_saadc.o"
 "Output/Release/Obj/wearable/nrfx_twi.o"
 "Output/Release/Obj/wearable/nrfx_rtc.o"
-"Output/Release/Obj/wearable/bsp.o"
-"Output/Release/Obj/wearable/bsp_btn_ble.o"
 "Output/Release/Obj/wearable/main.o"
 "Output/Release/Obj/wearable/acc.o"
 "Output/Release/Obj/wearable/activity.o"

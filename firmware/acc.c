@@ -46,6 +46,25 @@ volatile uint8_t current_orientation = 0;  //ZH,ZL,YH,YL,XH,ZL
 
 int8_t orientation[3] = {0,0,0};
 
+
+static void acc_int_event_handler(nrfx_gpiote_pin_t pin, nrf_gpiote_polarity_t action)
+{
+    uint32_t err_code;
+    uint8_t reg_val = 0;
+
+    err_code = acc_read_regs(REG_INT1_SRC, &reg_val, 1);
+    RETURN_IF_ERROR(err_code);
+
+    if((reg_val & 0x0F) != (current_orientation & 0x0F)) {
+        NRF_LOG_DEBUG("mode movement orientation change %x, %x\r\n", reg_val, current_orientation);
+
+        //orientation change
+        current_orientation = (reg_val & 0x3f);
+
+        acc_update_orientation();
+    }
+}
+
 static ret_code_t acc_gpio_init(void) 
 {
     ret_code_t err_code = nrfx_gpiote_init();
