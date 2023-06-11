@@ -4,11 +4,18 @@ Example bluetooth wearable code to track sleep and activity using the nRF52832 a
 
 This is functional code that logs average intensity data once a minute. Logged data is downloaded over a bluetooth connection to a phone or computer for analysis. This has been tested against the very popular Mi Band 3 and has shown to be nearly identical.
 
+Depending on the hardware, this will run for 3 - 5 months on a 2032 coin cell. 
+
+I've recently changed from a FIFO driven interrupt to timer based reading of accelerometer data after finding an intermittent bug that prevented the SoC from sleeping properly. There's some data in the Errata about this and I hope to have that worked out eventually. However, the difference in power draw is negligible. 
+
+I'm currently working on a Zephyr RTOS version of this project using the nRF Connect SDK and will add it to the repository when completed.
+
 An example Web-Bluetooth application is provided (web folder). 
 
 A common method for calculating sleep stage:
 
-- more than 5 minutes of intensity under 20 is considered sleep
+- intensity under 20 is considered sitting / low activity
+- more than 5 minutes of intensity under 5-10 can be considered entering sleep
 - more than 15 minutes of uninterrupted sleep is considered deep sleep
 
 ## Hardware Setup
